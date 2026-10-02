@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>🎮 Multiplayer Guessing Game</title>
+
+    <style>
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #111827;
+            color: white;
+        }
+
+        .container {
+            width: 600px;
+            max-width: 94%;
+            margin: 30px auto;
+        }
+
+        h1,
+        h2 {
+            text-align: center;
+        }
+
+        .box {
+            background: #222;
+            padding: 22px;
+            margin: 18px 0;
+            border-radius: 18px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        input {
+            box-sizing: border-box;
+            padding: 13px;
+            width: 100%;
+            border-radius: 10px;
+            border: none;
+            font-size: 17px;
+            outline: none;
+        }
+
+        button {
+            padding: 12px 24px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 10px;
+            background: #22c55e;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            opacity: 0.85;
+        }
+
+        .room {
+            text-align: center;
+            color: #facc15;
+            font-size: 28px;
+            letter-spacing: 5px;
+            font-weight: bold;
+        }
+
+        .player {
+            text-align: center;
+            margin: 7px;
+        }
+
+        .turn {
+            color: #22c55e;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .waiting {
+            color: #facc15;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .winner {
+            color: #22c55e;
+            font-size: 30px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .loser {
+            color: #ef4444;
+            font-size: 25px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .guess {
+            background: #333;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 10px;
+        }
+
+        .result {
+            color: #ddd;
+            margin-top: 5px;
+        }
+
+        /* CHAT */
+
+        .chat-box {
+            height: 300px;
+            overflow-y: auto;
+            background: #111;
+            padding: 12px;
+            border-radius: 12px;
+        }
+
+        .chat-message {
+            background: #2d2d2d;
+            padding: 9px;
+            margin: 7px 0;
+            border-radius: 10px;
+        }
+
+        .chat-name {
+            color: #60a5fa;
+            font-weight: bold;
+        }
+
+        .chat-time {
+            color: #888;
+            font-size: 12px;
+            margin-left: 6px;
+        }
+
+        .chat-input {
+            margin-top: 10px;
+        }
+
+        .chat-input button {
+            width: 100%;
+        }
+
+        #liveStatus {
+            text-align: center;
+            color: #60a5fa;
+            font-size: 13px;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+    <h1>🎮 Multiplayer Guessing Game</h1>
+
+
+    <!-- ROOM -->
+
+    <div class="box">
+
+        <h2>👤 {{ player_name }}</h2>
+
+        <p style="text-align:center;">
+            Room Code
+        </p>
+
+        <div class="room">
+            {{ room_code }}
+        </div>
+
+        <p style="text-align:center;">
+            👥 Players:
+            <span id="playerCount">
+                {{ players|length }}
+            </span>
+            /2
+        </p>
+
+        <div id="playersList">
+
+            {% for player in players %}
+
+                <div class="player">
+                    🧑 {{ player }}
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+
+    <!-- GAME -->
+
+    <div id="gameArea">
+
+        {% if winner %}
+
+            <div class="box">
+
+                {% if winner == player_name %}
+
+                    <div class="winner">
+                        🏆 YOU WIN!
+                    </div>
+
+                    <p style="text-align:center;">
+                        🎉 Tumne secret number guess kar liya!
+                    </p>
+
+                {% else %}
+
+                    <div class="loser">
+                        😔 YOU LOSE!
+                    </div>
+
+                    <p style="text-align:center;">
+                        🏆 {{ winner }} jeet gaya!
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+
+        {% elif players|length < 2 %}
+
+            <div class="box">
+
+                <div class="waiting">
+                    ⏳ Player 2 ke join hone ka wait karo...
+                </div>
+
+            </div>
+
+
+        {% else %}
+
+            <div class="box">
+
+                {% if current_player == player_name %}
+
+                    <div class="turn">
+                        🎯 YOUR TURN!
+                    </div>
+
+                    <p style="text-align:center;">
+                        Ab tumhara guess hai.
+                    </p>
+
+                    <form
+                        action="/guess/{{ room_code }}"
+                        method="POST"
+                    >
+
+                        <input
+                            type="number"
+                            name="guess"
+                            min="1"
+                            max="100"
+                            placeholder="1 - 100"
+                            required
+                        >
+
+                        <input
+                            type="hidden"
+                            name="player_name"
+                            value="{{ player_name }}"
+                        >
+
+                        <button type="submit">
+                            🎯 GUESS
+                        </button>
+
+                    </form>
+
+                {% else %}
+
+                    <div class="waiting">
+                        ⏳ {{ current_player }} ka turn hai...
+                    </div>
+
+                    <p style="text-align:center;">
+                        Apni turn ka wait karo.
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- GUESS HISTORY -->
+
+    <div class="box">
+
+        <h2>📜 Guess History</h2>
+
+        <div id="guessHistory">
+
+            {% if guesses %}
+
+                {% for guess in guesses %}
+
+                    <div class="guess">
+
+                        <b>
+                            {{ loop.index }}️⃣
+                        </b>
+
+                        👤 {{ guess.player }}
+
+                        →
+
+                        🔢 {{ guess.number }}
+
+                        <div class="result">
+                            {{ guess.result }}
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            {% else %}
+
+                <p style="text-align:center;">
+                    Abhi koi guess nahi hua.
+                </p>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+
+    <!-- ================= -->
+    <!-- CHAT -->
+    <!-- ================= -->
+
+    <div class="box">
+
+        <h2>💬 Room Chat</h2>
+
+        <div
+            class="chat-box"
+            id="chatBox"
+        >
+
+            {% if messages %}
+
+                {% for msg in messages %}
+
+                    <div class="chat-message">
+
+                        <span class="chat-name">
+                            {{ msg.player }}
+                        </span>
+
+                        <span class="chat-time">
+                            {{ msg.time }}
+                        </span>
+
+                        <br>
+
+                        {{ msg.message }}
+
+                    </div>
+
+                {% endfor %}
+
+            {% else %}
+
+                <p style="text-align:center;">
+                    💬 Abhi koi message nahi hai.
+                </p>
+
+            {% endif %}
+
+        </div>
+
+
+        <form
+            id="chatForm"
+            class="chat-input"
+        >
+
+            <input
+                type="text"
+                id="chatMessage"
+                placeholder="Message likho..."
+                maxlength="200"
+                autocomplete="off"
+                required
+            >
+
+            <button type="submit">
+                💬 Send
+            </button>
+
+        </form>
+
+    </div>
+
+
+    <div id="liveStatus">
+        🟢 Live connection active
+    </div>
+
+
+</div>
+
+
+<script>
+
+    let lastGuessCount = {{ guesses|length }};
+    let lastPlayerCount = {{ players|length }};
+    let lastMessageCount = {{ messages|length }};
+    let lastWinner = {{ winner|tojson }};
+
+
+    /*
+    =========================
+    CHAT DISPLAY
+    =========================
+    */
+
+    function showMessages(messages) {
+
+        const chatBox =
+            document.getElementById("chatBox");
+
+        chatBox.innerHTML = "";
+
+        if (messages.length === 0) {
+
+            chatBox.innerHTML =
+                "<p style='text-align:center;'>💬 Abhi koi message nahi hai.</p>";
+
+            return;
+        }
+
+
+        messages.forEach(function(msg) {
+
+            const div =
+                document.createElement("div");
+
+            div.className = "chat-message";
+
+            div.innerHTML =
+                `<span class="chat-name">
+                    ${escapeHtml(msg.player)}
+                </span>
+
+                <span class="chat-time">
+                    ${escapeHtml(msg.time)}
+                </span>
+
+                <br>
+
+                ${escapeHtml(msg.message)}`;
+
+            chatBox.appendChild(div);
+
+        });
+
+
+        // Chat ko latest message par le jao
+        chatBox.scrollTop =
+            chatBox.scrollHeight;
+    }
+
+
+    /*
+    =========================
+    SECURITY
+    =========================
+    */
+
+    function escapeHtml(text) {
+
+        const div =
+            document.createElement("div");
+
+        div.textContent = text;
+
+        return div.innerHTML;
+    }
+
+
+    /*
+    =========================
+    SEND CHAT
+    =========================
+    */
+
+    document
+        .getElementById("chatForm")
+        .addEventListener("submit", function(event) {
+
+            event.preventDefault();
+
+            const input =
+                document.getElementById("chatMessage");
+
+            const message =
+                input.value.trim();
+
+            if (!message) {
+                return;
+            }
+
+
+            const formData =
+                new FormData();
+
+            formData.append(
+                "player_name",
+                "{{ player_name }}"
+            );
+
+            formData.append(
+                "message",
+                message
+            );
+
+
+            fetch(
+                "/chat/{{ room_code }}",
+                {
+                    method: "POST",
+                    body: formData
+                }
+            )
+
+            .then(response => response.json())
+
+            .then(data => {
+
+                if (data.success) {
+
+                    input.value = "";
+
+                    updateGame();
+
+                }
+
+            })
+
+            .catch(error => {
+
+                console.log(
+                    "Chat error:",
+                    error
+                );
+
+            });
+
+        });
+
+
+    /*
+    =========================
+    LIVE UPDATE
+    =========================
+    */
+
+    function updateGame() {
+
+        fetch("/status/{{ room_code }}")
+
+        .then(response => response.json())
+
+        .then(data => {
+
+            if (data.error) {
+                return;
+            }
+
+
+            /*
+            Player joined
+            */
+
+            if (
+                data.players.length !==
+                lastPlayerCount
+            ) {
+
+                location.reload();
+
+                return;
+            }
+
+
+            /*
+            New chat message
+            */
+
+            if (
+                data.messages.length !==
+                lastMessageCount
+            ) {
+
+                lastMessageCount =
+                    data.messages.length;
+
+                showMessages(
+                    data.messages
+                );
+            }
+
+
+            /*
+            New guess
+            */
+
+            if (
+                data.guesses.length !==
+                lastGuessCount
+            ) {
+
+                lastGuessCount =
+                    data.guesses.length;
+
+                location.reload();
+
+                return;
+            }
+
+
+            /*
+            Winner
+            */
+
+            if (
+                data.winner !==
+                lastWinner
+            ) {
+
+                location.reload();
+
+                return;
+            }
+
+        })
+
+        .catch(error => {
+
+            console.log(
+                "Live update error:",
+                error
+            );
+
+        });
+
+    }
+
+
+    /*
+    Server ko background mein check karo.
+    Page sirf game change hone par reload hoga.
+    Chat ke liye page reload nahi hoga.
+    */
+
+    setInterval(
+        updateGame,
+        1000
+    );
+
+
+    /*
+    Chat ko latest message par rakho
+    */
+
+    const chatBox =
+        document.getElementById("chatBox");
+
+    chatBox.scrollTop =
+        chatBox.scrollHeight;
+
+</script>
+
+
+</body>
+
+</html>
